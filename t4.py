@@ -7,8 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1o8v3RTofWBB8Un7NL3wRjy2RzR_hUgF-
 """
 
-!pip3 uninstall --yes torch torchaudio torchvision torchtext torchdata
-!pip3 install torch torchaudio torchvision torchtext torchdata
 
 import torch
 import torchvision
@@ -67,12 +65,12 @@ class MyNet(nn.Module):
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.dropout1 = nn.Dropout2d(p=0.25)
-        self.dropout2 = nn.Dropout2d(p=0.5)
+        self.dropout2 = nn.Dropout(p=0.5)
         self.fc1 = nn.Linear(64 * 7 * 7, 128)
         self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(F.relu(self.conv1(x)), 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
@@ -98,16 +96,9 @@ def train(model, device, train_loader, optimizer, epoch):
                 100. * batch_idx / len(train_loader), loss.item()))
             # Add this line to log the current learning rate
             print('Current Learning Rate: {:.6f}'.format(optimizer.param_groups[0]['lr']))
-        loss.backward()
-        optimizer.step()
-        
-        # Print training stats
-        if batch_idx % log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
-        
+
     # Evaluate on the test set after every epoch
+    model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
@@ -124,3 +115,10 @@ def train(model, device, train_loader, optimizer, epoch):
     # Print test set results
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset), test_accuracy))
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = MyNet().to(device)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    for epoch in range(1, n_epochs + 1):
+        train(model, device, train_loader, optimizer, epoch)
